@@ -63,6 +63,9 @@ class Config:
     max_token_per_leaf_module: int = DEFAULT_MAX_TOKEN_PER_LEAF_MODULE
     # Agent instructions for customization
     agent_instructions: Optional[Dict[str, Any]] = None
+    # Iterative generation settings
+    major_revision_threshold: float = 0.3  # 30% change triggers major revision
+    max_propagation_depth: int = 10  # Max depth for doc update propagation
     
     @property
     def include_patterns(self) -> Optional[List[str]]:
@@ -159,7 +162,9 @@ class Config:
         max_token_per_module: int = DEFAULT_MAX_TOKEN_PER_MODULE,
         max_token_per_leaf_module: int = DEFAULT_MAX_TOKEN_PER_LEAF_MODULE,
         max_depth: int = MAX_DEPTH,
-        agent_instructions: Optional[Dict[str, Any]] = None
+        agent_instructions: Optional[Dict[str, Any]] = None,
+        major_revision_threshold: float = 0.3,
+        max_propagation_depth: int = 10
     ) -> 'Config':
         """
         Create configuration for CLI context.
@@ -177,6 +182,8 @@ class Config:
             max_token_per_leaf_module: Maximum tokens per leaf module
             max_depth: Maximum depth for hierarchical decomposition
             agent_instructions: Custom agent instructions dict
+            major_revision_threshold: Threshold for triggering major revision (0.0-1.0)
+            max_propagation_depth: Maximum depth for doc update propagation
             
         Returns:
             Config instance
@@ -198,5 +205,7 @@ class Config:
             max_tokens=max_tokens,
             max_token_per_module=max_token_per_module,
             max_token_per_leaf_module=max_token_per_leaf_module,
-            agent_instructions=agent_instructions
+            agent_instructions=agent_instructions,
+            major_revision_threshold=major_revision_threshold,
+            max_propagation_depth=max_propagation_depth
         )

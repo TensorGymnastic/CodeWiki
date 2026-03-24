@@ -59,8 +59,16 @@ def parse_patterns(patterns_str: str) -> List[str]:
 )
 @click.option(
     "--no-cache",
+    "--force-full",
+    "force_full",
     is_flag=True,
-    help="Force full regeneration, ignoring cache",
+    help="Force full regeneration, ignoring existing documentation",
+)
+@click.option(
+    "--from-commit",
+    type=str,
+    default=None,
+    help="Override stored commit for iterative generation (e.g., 'abc123')",
 )
 @click.option(
     "--include",
@@ -132,7 +140,8 @@ def generate_command(
     output: str,
     create_branch: bool,
     github_pages: bool,
-    no_cache: bool,
+    force_full: bool,
+    from_commit: Optional[str],
     include: Optional[str],
     exclude: Optional[str],
     focus: Optional[str],
@@ -150,10 +159,13 @@ def generate_command(
     Analyzes the current repository and generates documentation using LLM-powered
     analysis. Documentation is output to ./docs/ by default.
     
+    Supports iterative generation: if documentation already exists (metadata.json
+    with commit_id), only changed modules will be updated.
+    
     Examples:
     
     \b
-    # Basic generation
+    # Basic generation (uses iterative if docs exist)
     $ codewiki generate
     
     \b
@@ -161,8 +173,12 @@ def generate_command(
     $ codewiki generate --create-branch --github-pages
     
     \b
-    # Force full regeneration
-    $ codewiki generate --no-cache
+    # Force full regeneration (ignore existing docs)
+    $ codewiki generate --force-full
+    
+    \b
+    # Iterative from a specific commit
+    $ codewiki generate --from-commit abc123
     
     \b
     # C# project: only .cs files, exclude tests
@@ -289,7 +305,7 @@ def generate_command(
         generation_options = GenerationOptions(
             create_branch=create_branch,
             github_pages=github_pages,
-            no_cache=no_cache,
+            no_cache=force_full,
             custom_output=output if output != "docs" else None
         )
         
@@ -361,7 +377,9 @@ def generate_command(
                 'max_depth': max_depth if max_depth is not None else config.max_depth,
             },
             verbose=verbose,
-            generate_html=github_pages
+            generate_html=github_pages,
+            force_full=force_full,
+            from_commit=from_commit
         )
         
         # Run generation
