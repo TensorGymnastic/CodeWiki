@@ -11,8 +11,15 @@ import os
 import logging
 from pathlib import Path
 from typing import Optional
-import keyring
-from keyring.errors import KeyringError
+
+try:
+    import keyring
+    from keyring.errors import KeyringError
+except ModuleNotFoundError:  # pragma: no cover - exercised via import path behavior
+    keyring = None
+
+    class KeyringError(Exception):
+        """Fallback keyring error type when optional dependency is absent."""
 
 from codewiki.cli.models.config import Configuration
 from codewiki.cli.utils.errors import ConfigurationError, FileSystemError
@@ -55,6 +62,9 @@ class ConfigManager:
         """Check if system keyring is available."""
         if self._force_no_keyring:
             logger.debug("Keyring disabled via CODEWIKI_NO_KEYRING")
+            return False
+        if keyring is None:
+            logger.debug("keyring package is not installed; using file-based credentials")
             return False
         try:
             # Try to get/set a test value
@@ -318,4 +328,3 @@ class ConfigManager:
     def config_file_path(self) -> Path:
         """Get configuration file path."""
         return CONFIG_FILE
-
