@@ -32,10 +32,17 @@ class PlaywrightActionCapture(BaseModel):
     target_route: str | None = None
 
 
+class PlaywrightNetworkRequestCapture(BaseModel):
+    method: str = Field(min_length=1)
+    url: str = Field(min_length=1)
+    resource_type: str | None = None
+
+
 class PlaywrightPageCapture(BaseModel):
     route: str = Field(min_length=1)
     title: str | None = None
     screenshot_path: str | None = None
+    network_requests: list[PlaywrightNetworkRequestCapture] = Field(default_factory=list)
     fields: list[PlaywrightFieldCapture] = Field(default_factory=list)
     actions: list[PlaywrightActionCapture] = Field(default_factory=list)
 
@@ -48,8 +55,12 @@ class PlaywrightExtractorConfig(BaseModel):
     page_prefix: str = "page"
     field_prefix: str = "field"
     page_evidence_prefix: str = "ev.playwright.page"
+    screenshot_evidence_prefix: str = "ev.screenshot.page"
+    network_evidence_prefix: str = "ev.network.page"
     contains_relation: str = "contains"
     navigation_relation: str = "navigates_to"
+    screenshot_relation: str = "validated_by"
+    network_relation: str = "invokes"
     fallback_field_type: str = "text"
     field_type_by_role: dict[str, str] = Field(
         default_factory=lambda: {
@@ -79,6 +90,12 @@ class PlaywrightExtractorConfig(BaseModel):
 
     def page_evidence_id(self, route: str) -> str:
         return f"{self.page_evidence_prefix}.{self.slugify_route(route)}"
+
+    def screenshot_evidence_id(self, route: str) -> str:
+        return f"{self.screenshot_evidence_prefix}.{self.slugify_route(route)}"
+
+    def network_evidence_id(self, route: str, ordinal: int) -> str:
+        return f"{self.network_evidence_prefix}.{self.slugify_route(route)}.{ordinal}"
 
     def field_type(self, role: str) -> str:
         return self.field_type_by_role.get(role.lower(), self.fallback_field_type)
@@ -123,6 +140,43 @@ class PlaywrightCatalogExtractor:
                     summary=f"Playwright crawl evidence for {page.route}",
                 )
             )
+            if page.screenshot_path:
+                screenshot_evidence_id = self.config.screenshot_evidence_id(page.route)
+                evidence.append(
+                    EvidenceRecord(
+                        id=screenshot_evidence_id,
+                        evidence_type="screenshot",
+                        source_ref=page.screenshot_path,
+                        summary=f"Screenshot for {page.route}",
+                    )
+                )
+                relations.append(
+                    RelationRecord(
+                        source=page_id,
+                        relation=self.config.screenshot_relation,
+                        target=screenshot_evidence_id,
+                        evidence_ids=[evidence_id],
+                    )
+                )
+
+            for index, request in enumerate(page.network_requests, start=1):
+                network_evidence_id = self.config.network_evidence_id(page.route, index)
+                evidence.append(
+                    EvidenceRecord(
+                        id=network_evidence_id,
+                        evidence_type="network",
+                        source_ref=f"{request.method} {request.url}",
+                        summary=f"Observed {request.method} request for {page.route}",
+                    )
+                )
+                relations.append(
+                    RelationRecord(
+                        source=page_id,
+                        relation=self.config.network_relation,
+                        target=network_evidence_id,
+                        evidence_ids=[evidence_id],
+                    )
+                )
 
             for field in page.fields:
                 field_id = self.config.field_id(page.route, field.name)
@@ -184,6 +238,7 @@ __all__ = [
     "PlaywrightCrawl",
     "PlaywrightExtractorConfig",
     "PlaywrightFieldCapture",
+    "PlaywrightNetworkRequestCapture",
     "PlaywrightPageCapture",
     "load_playwright_crawl",
 ]

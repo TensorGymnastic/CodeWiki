@@ -16,6 +16,13 @@ def test_extractor_builds_catalog_from_playwright_crawl(tmp_path):
                         "route": "/customers/edit",
                         "title": "Customer Edit",
                         "screenshot_path": "screens/customer-edit.png",
+                        "network_requests": [
+                            {
+                                "method": "POST",
+                                "url": "/api/customers/123",
+                                "resource_type": "fetch",
+                            }
+                        ],
                         "fields": [
                             {
                                 "name": "customer_name",
@@ -63,9 +70,13 @@ def test_extractor_builds_catalog_from_playwright_crawl(tmp_path):
     assert "field.customers_edit.customer_name" in field_ids
     assert "field.customers_edit.status" in field_ids
     assert "ev.playwright.page.customers_edit" in evidence_ids
+    assert "ev.screenshot.page.customers_edit" in evidence_ids
+    assert "ev.network.page.customers_edit.1" in evidence_ids
     assert ("page.customers_edit", "contains", "field.customers_edit.customer_name") in relations
     assert ("page.customers_edit", "contains", "field.customers_edit.status") in relations
     assert ("page.customers_edit", "navigates_to", "page.customers_view") in relations
+    assert ("page.customers_edit", "validated_by", "ev.screenshot.page.customers_edit") in relations
+    assert ("page.customers_edit", "invokes", "ev.network.page.customers_edit.1") in relations
 
     customer_name = next(field for field in catalog.fields if field.id == "field.customers_edit.customer_name")
     status = next(field for field in catalog.fields if field.id == "field.customers_edit.status")
@@ -74,6 +85,18 @@ def test_extractor_builds_catalog_from_playwright_crawl(tmp_path):
     assert customer_name.field_type == "text"
     assert status.field_type == "select"
     assert customer_edit.screenshot_refs == ["screens/customer-edit.png"]
+
+    screenshot_evidence = next(
+        item for item in catalog.evidence if item.id == "ev.screenshot.page.customers_edit"
+    )
+    network_evidence = next(
+        item for item in catalog.evidence if item.id == "ev.network.page.customers_edit.1"
+    )
+
+    assert screenshot_evidence.evidence_type == "screenshot"
+    assert screenshot_evidence.source_ref == "screens/customer-edit.png"
+    assert network_evidence.evidence_type == "network"
+    assert network_evidence.source_ref == "POST /api/customers/123"
 
 
 def test_extractor_ignores_transitions_to_unknown_routes():
@@ -99,4 +122,4 @@ def test_extractor_ignores_transitions_to_unknown_routes():
 
     catalog = PlaywrightCatalogExtractor().extract(crawl)
 
-    assert not catalog.relations
+    assert {relation.relation for relation in catalog.relations} == set()
