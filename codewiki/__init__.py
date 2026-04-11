@@ -8,7 +8,10 @@ __version__ = "1.0.1"
 __author__ = "CodeWiki Contributors"
 __license__ = "MIT"
 
-from codewiki.cli.main import cli
+def cli():
+    """Lazy CLI entrypoint to avoid importing optional CLI deps at package import time."""
+    from codewiki.cli.main import cli as _cli
+
+    return _cli()
 
 __all__ = ["cli", "__version__"]
-

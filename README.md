@@ -28,6 +28,22 @@
 
 ---
 
+## Fork Direction
+
+This repository is being adapted into `enduser-wiki`: a code-first, transaction-oriented documentation system.
+
+The immediate design analysis for the fork lives in:
+
+- [`docs/2026-04-10-enduser-wiki-analysis.md`](docs/2026-04-10-enduser-wiki-analysis.md)
+
+The target direction differs from upstream `CodeWiki`:
+- upstream focuses on repository/module documentation
+- `enduser-wiki` will focus on linked catalogs for entities, pages, fields, and transactions
+- screenshots and Playwright evidence will validate runtime UI behavior
+- canonical generated state will be YAML-first, rendered to markdown
+
+---
+
 ## Quick Start
 
 ### 1. Install CodeWiki
