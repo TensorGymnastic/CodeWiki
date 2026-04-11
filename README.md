@@ -42,6 +42,50 @@ The target direction differs from upstream `CodeWiki`:
 - screenshots and Playwright evidence will validate runtime UI behavior
 - canonical generated state will be YAML-first, rendered to markdown
 
+### Current Enduser Review Flow
+
+The first enduser-facing publication gate now uses:
+
+- validated YAML catalogs as the canonical source
+- a fixed Markdown template with required sections
+- `codex` as the primary LLM judge
+- `opencode` as the secondary adversarial reviewer
+
+The fixed Markdown format requires these sections:
+
+- `# <Document Title>`
+- `## Purpose`
+- `## Audience`
+- `## Preconditions`
+- `## Steps`
+- `## Fields`
+- `## Navigation`
+- `## Evidence`
+- `## Review Status`
+
+Current CLI flow:
+
+```bash
+codewiki enduser validate catalog.yaml
+codewiki enduser render-doc catalog.yaml --output guide.md
+codewiki enduser review-doc guide.md --catalog catalog.yaml --output review.json
+```
+
+Review policy:
+
+- `codex` runs first and must succeed
+- `opencode` runs second and must succeed
+- the output artifact contains `judge`, `adversarial`, and `publication_decision`
+
+Opt-in real-runner integration test:
+
+```bash
+ENDUSER_ENABLE_REAL_REVIEW_TEST=1 \
+python3 -m pytest tests/test_enduser_review_integration.py -q
+```
+
+This requires both `codex` and `opencode` on `PATH` and any credentials those CLIs require.
+
 ---
 
 ## Quick Start

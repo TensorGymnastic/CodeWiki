@@ -349,6 +349,12 @@ Use an LLM judge to score:
 - evidence quality
 - coverage quality per catalog
 
+Implementation note for the current slice:
+
+- use `codex` as the first runner
+- require structured JSON output that can be normalized into a review artifact
+- fail the publication gate if the judge call itself fails
+
 ### Stage 8: Adversarial review
 
 Use a second agent to challenge:
@@ -359,6 +365,12 @@ Use a second agent to challenge:
 - overstated transaction claims
 - weak field-impact claims
 
+Implementation note for the current slice:
+
+- use `opencode` as the second runner
+- focus the first adversarial pass on unsupported claims, missing evidence, and format attacks
+- fail the publication gate if the adversarial call itself fails
+
 ### Stage 9: Markdown rendering
 
 Render YAML into:
@@ -368,6 +380,18 @@ Render YAML into:
 - transaction pages
 - relationship indexes
 - overview landing pages
+
+The first rendered template should stay intentionally narrow and machine-checkable:
+
+- title
+- purpose
+- audience
+- preconditions
+- numbered steps
+- fields table
+- navigation section
+- evidence section
+- review status section
 
 ## Why YAML Instead of Markdown-First
 
