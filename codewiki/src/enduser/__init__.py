@@ -22,6 +22,7 @@ from .playwright import (
     PlaywrightCrawl,
     PlaywrightExtractorConfig,
     PlaywrightFieldCapture,
+    PlaywrightNetworkRequestCapture,
     PlaywrightPageCapture,
     load_playwright_crawl,
 )
@@ -37,6 +38,7 @@ __all__ = [
     "PlaywrightCrawl",
     "PlaywrightExtractorConfig",
     "PlaywrightFieldCapture",
+    "PlaywrightNetworkRequestCapture",
     "PlaywrightPageCapture",
     "load_playwright_crawl",
     "EnduserCatalog",

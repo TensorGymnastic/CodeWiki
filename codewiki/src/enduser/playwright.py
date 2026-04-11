@@ -155,7 +155,7 @@ class PlaywrightCatalogExtractor:
                         source=page_id,
                         relation=self.config.screenshot_relation,
                         target=screenshot_evidence_id,
-                        evidence_ids=[evidence_id],
+                        evidence_ids=[evidence_id, screenshot_evidence_id],
                     )
                 )
 
@@ -174,7 +174,7 @@ class PlaywrightCatalogExtractor:
                         source=page_id,
                         relation=self.config.network_relation,
                         target=network_evidence_id,
-                        evidence_ids=[evidence_id],
+                        evidence_ids=[evidence_id, network_evidence_id],
                     )
                 )
 

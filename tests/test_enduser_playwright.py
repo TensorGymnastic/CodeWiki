@@ -98,6 +98,26 @@ def test_extractor_builds_catalog_from_playwright_crawl(tmp_path):
     assert network_evidence.evidence_type == "network"
     assert network_evidence.source_ref == "POST /api/customers/123"
 
+    screenshot_relation = next(
+        item
+        for item in catalog.relations
+        if item.relation == "validated_by" and item.target == "ev.screenshot.page.customers_edit"
+    )
+    network_relation = next(
+        item
+        for item in catalog.relations
+        if item.relation == "invokes" and item.target == "ev.network.page.customers_edit.1"
+    )
+
+    assert screenshot_relation.evidence_ids == [
+        "ev.playwright.page.customers_edit",
+        "ev.screenshot.page.customers_edit",
+    ]
+    assert network_relation.evidence_ids == [
+        "ev.playwright.page.customers_edit",
+        "ev.network.page.customers_edit.1",
+    ]
+
 
 def test_extractor_ignores_transitions_to_unknown_routes():
     crawl = load_playwright_crawl(
