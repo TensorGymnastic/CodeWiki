@@ -1,0 +1,72 @@
+name: nightly-deep-assurance
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  mutation_testing:
+    name: mutation_testing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - run: python -m pip install -e '.[dev,quality]' mutmut
+      - run: python -m mutmut run --paths-to-mutate codewiki/src/enduser
+
+  api_fuzz_and_contracts:
+    name: api_fuzz_and_contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - run: python -m pip install -e '.[dev]' schemathesis
+      - run: echo "No OpenAPI contract is currently published; add one to enable schemathesis targets."
+
+  parser_fuzzing:
+    name: parser_fuzzing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: python -m pip install atheris pyyaml
+      - run: echo "Add dedicated parser fuzz targets under scripts/fuzz/ to activate atheris."
+
+  image_and_sbom_scan:
+    name: image_and_sbom_scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: aquasecurity/trivy-action@0.30.0
+        with:
+          scan-type: fs
+          scan-ref: .
+      - uses: anchore/sbom-action@v0
+        with:
+          format: spdx-json
+          output-file: nightly-sbom.spdx.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nightly-sbom
+          path: nightly-sbom.spdx.json
+
+  flaky_test_report:
+    name: flaky_test_report
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - run: python -m pip install -e '.[dev]' pytest-repeat
+      - run: python -m pytest tests/test_enduser_review_e2e.py --count=5 -q

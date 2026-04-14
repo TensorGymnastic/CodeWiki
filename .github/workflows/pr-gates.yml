@@ -1,0 +1,206 @@
+name: pr-gates
+
+on:
+  pull_request:
+  merge_group:
+  push:
+    branches:
+      - main
+
+jobs:
+  detect_changes:
+    name: detect_changes
+    runs-on: ubuntu-latest
+    outputs:
+      python_files: ${{ steps.changed.outputs.python_all_changed_files }}
+      container_changed: ${{ steps.filter.outputs.container }}
+      iac_changed: ${{ steps.filter.outputs.iac }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - id: changed
+        uses: tj-actions/changed-files@v47
+        with:
+          files: |
+            **/*.py
+            pyproject.toml
+            requirements.txt
+            .pre-commit-config.yaml
+            Makefile
+      - id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            container:
+              - '**/Dockerfile'
+              - '**/*.Dockerfile'
+            iac:
+              - 'infra/**'
+              - 'terraform/**'
+              - 'k8s/**'
+              - 'helm/**'
+              - '**/*.tf'
+
+  lint_and_type:
+    name: lint_and_type
+    needs: detect_changes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - run: python -m pip install -e '.[dev,quality]'
+      - name: Ruff format check
+        if: ${{ needs.detect_changes.outputs.python_files != '' }}
+        run: python -m ruff format --check ${{ needs.detect_changes.outputs.python_files }}
+      - name: Ruff lint
+        if: ${{ needs.detect_changes.outputs.python_files != '' }}
+        run: python -m ruff check ${{ needs.detect_changes.outputs.python_files }}
+      - name: Mypy maintained surfaces
+        run: python scripts/run_mypy.py
+
+  unit_and_integration_tests:
+    name: unit_and_integration_tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - run: python -m pip install -e '.[dev,quality]'
+      - run: python -m pytest -n auto --cov=codewiki --cov-report=xml --cov-report=term-missing
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
+
+  coverage_gate:
+    name: coverage_gate
+    needs: unit_and_integration_tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - run: python -m pip install -e '.[dev,quality]'
+      - run: python -m pytest --cov=codewiki --cov-report=xml --cov-report=term-missing
+      - name: Maintained-surface coverage threshold
+        run: >
+          python -m coverage report
+          --include='codewiki/src/enduser/*,codewiki/cli/commands/enduser.py,codewiki/run_web_app.py'
+          --fail-under=85
+      - name: Diff coverage threshold
+        run: >
+          python -m diff_cover coverage.xml
+          --compare-branch=origin/${{ github.base_ref || 'main' }}
+          --fail-under=90
+
+  security_sast:
+    name: security_sast
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - run: python -m pip install -e '.[quality]'
+      - run: python -m bandit -c pyproject.toml -r codewiki
+      - uses: returntocorp/semgrep-action@v1
+        with:
+          config: auto
+
+  supply_chain:
+    name: supply_chain
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - run: python -m pip install -e '.[quality]'
+      - run: python scripts/check_dependency_manifests.py
+      - run: python -m pip_audit -r requirements.txt
+      - uses: google/osv-scanner-action@v2
+        with:
+          scan-args: |-
+            --lockfile=requirements.txt
+
+  secrets:
+    name: secrets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  container_and_iac:
+    name: container_and_iac
+    needs: detect_changes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Skip message
+        if: ${{ needs.detect_changes.outputs.container_changed != 'true' && needs.detect_changes.outputs.iac_changed != 'true' }}
+        run: echo "No container or IaC changes detected."
+      - name: Hadolint
+        if: ${{ needs.detect_changes.outputs.container_changed == 'true' }}
+        uses: hadolint/hadolint-action@v3.3.0
+        with:
+          recursive: true
+      - name: Checkov
+        if: ${{ needs.detect_changes.outputs.iac_changed == 'true' }}
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          quiet: true
+      - name: Trivy filesystem scan
+        if: ${{ needs.detect_changes.outputs.container_changed == 'true' || needs.detect_changes.outputs.iac_changed == 'true' }}
+        uses: aquasecurity/trivy-action@0.30.0
+        with:
+          scan-type: fs
+          scan-ref: .
+
+  build_and_package:
+    name: build_and_package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - run: python -m pip install -e '.[dev,quality]'
+      - run: python -m build
+      - run: python scripts/smoke_install.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/*
+
+  docs_and_contracts:
+    name: docs_and_contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - run: python -m pip install -e '.[dev]'
+      - run: python scripts/run_docs_contracts.py

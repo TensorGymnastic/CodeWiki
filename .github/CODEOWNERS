@@ -1,0 +1,8 @@
+* @TensorGymnastic
+
+/codewiki/src/enduser/ @TensorGymnastic
+/codewiki/cli/commands/enduser.py @TensorGymnastic
+/scripts/ @TensorGymnastic
+/examples/ @TensorGymnastic
+/pyproject.toml @TensorGymnastic
+/requirements.txt @TensorGymnastic
