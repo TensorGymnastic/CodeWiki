@@ -6,7 +6,7 @@ import json
 import tempfile
 import subprocess
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal, Protocol, cast
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -24,6 +24,12 @@ PublicationStatus = Literal["approved", "rejected"]
 RunnerName = Literal["codex"]
 DEFAULT_REVIEW_TIMEOUT_SECONDS = 120
 STRING_ARRAY_SCHEMA = {"type": "array", "items": {"type": "string"}}
+
+
+class NamedTemporaryFileHandle(Protocol):
+    name: str
+
+    def close(self) -> None: ...
 
 
 class ReviewScoreSet(BaseModel):
@@ -67,7 +73,7 @@ class EnduserReviewArtifact(BaseModel):
 
     @field_validator("document_path", "final_document_path", "catalog_path", "template_id")
     @classmethod
-    def _strip_required(cls, value: str) -> str:
+    def _strip_required(_cls, value: str) -> str:
         value = value.strip()
         if not value:
             raise ValueError("value must not be empty")
@@ -96,16 +102,16 @@ def _strip_markdown_code_fences(text: str) -> str:
     return "\n".join(lines[1:-1]).strip()
 
 
-def _extract_json_object(text: str) -> dict:
+def _extract_json_object(text: str) -> dict[str, Any]:
     stripped = _strip_markdown_code_fences(text)
     try:
-        return json.loads(stripped)
+        return cast(dict[str, Any], json.loads(stripped))
     except json.JSONDecodeError:
         start = stripped.find("{")
         end = stripped.rfind("}")
         if start == -1 or end == -1 or end < start:
             raise
-        return json.loads(stripped[start : end + 1])
+        return cast(dict[str, Any], json.loads(stripped[start : end + 1]))
 
 
 def _coerce_status(value: object, *, default: ReviewStatus | None = None) -> ReviewStatus | None:
@@ -135,7 +141,7 @@ def _stringify_items(items: object) -> list[str]:
     return normalized
 
 
-def _normalize_adversarial_response(response: dict) -> dict:
+def _normalize_adversarial_response(response: dict[str, Any]) -> dict[str, Any]:
     if "runner" in response and "status" in response and "summary" in response:
         normalized = dict(response)
         status = _coerce_status(normalized.get("status"))
@@ -170,7 +176,7 @@ def _normalize_score(value: object) -> int:
     return max(1, min(5, round(numeric / 20)))
 
 
-def _normalize_judge_response(response: dict) -> dict:
+def _normalize_judge_response(response: dict[str, Any]) -> dict[str, Any]:
     if "runner" in response and "status" in response and "summary" in response:
         normalized = dict(response)
         status = _coerce_status(normalized.get("status"))
@@ -201,9 +207,15 @@ def _normalize_judge_response(response: dict) -> dict:
         "runner": "codex",
         "status": status,
         "scores": {
-            "coverage": _normalize_score(scores.get("coverage", scores.get("catalog_coverage", scores.get("overall")))),
-            "evidence_alignment": _normalize_score(scores.get("evidence_alignment", scores.get("overall"))),
-            "format_compliance": _normalize_score(scores.get("format_compliance", scores.get("overall"))),
+            "coverage": _normalize_score(
+                scores.get("coverage", scores.get("catalog_coverage", scores.get("overall")))
+            ),
+            "evidence_alignment": _normalize_score(
+                scores.get("evidence_alignment", scores.get("overall"))
+            ),
+            "format_compliance": _normalize_score(
+                scores.get("format_compliance", scores.get("overall"))
+            ),
             "clarity": _normalize_score(scores.get("clarity", scores.get("overall"))),
         },
         "summary": (
@@ -215,7 +227,7 @@ def _normalize_judge_response(response: dict) -> dict:
     }
 
 
-def _write_output_schema(schema: dict) -> tempfile.NamedTemporaryFile:
+def _write_output_schema(schema: dict[str, Any]) -> NamedTemporaryFileHandle:
     schema_file = tempfile.NamedTemporaryFile(mode="w+", suffix=".json", encoding="utf-8")
     json.dump(schema, schema_file)
     schema_file.flush()
@@ -310,7 +322,7 @@ def run_codex_judge(
         },
     )
     response = _normalize_judge_response(response)
-    return JudgeReview.model_validate(response)
+    return cast(JudgeReview, JudgeReview.model_validate(response))
 
 
 def run_codex_adversarial(
@@ -346,7 +358,7 @@ def run_codex_adversarial(
         },
     )
     response = _normalize_adversarial_response(response)
-    return AdversarialReview.model_validate(response)
+    return cast(AdversarialReview, AdversarialReview.model_validate(response))
 
 
 def run_codex_final_draft(
@@ -374,7 +386,7 @@ def run_codex_final_draft(
     document = response.get("document", "").strip()
     if not document:
         raise ValueError("codex final draft response did not include a document")
-    return document + ("\n" if not document.endswith("\n") else "")
+    return cast(str, document + ("\n" if not document.endswith("\n") else ""))
 
 
 __all__ = [

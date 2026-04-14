@@ -1,0 +1,97 @@
+minimum_pre_commit_version: "3.7.0"
+default_install_hook_types:
+  - pre-commit
+  - pre-push
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.12.0
+    hooks:
+      - id: ruff-format
+        args: ["--check"]
+        stages: [pre-commit]
+      - id: ruff
+        stages: [pre-commit]
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ["--baseline", ".secrets.baseline"]
+        stages: [pre-commit]
+  - repo: local
+    hooks:
+      - id: mypy-main-package
+        name: mypy (enduser package)
+        entry: python scripts/run_mypy.py
+        language: python
+        additional_dependencies:
+          - mypy==1.18.2
+          - click>=8.1.0
+          - pydantic>=2.11.7
+          - PyYAML>=6.0.2
+          - types-PyYAML>=6.0.12.20250822
+        pass_filenames: false
+        stages: [pre-commit]
+      - id: vulture-high-confidence
+        name: vulture (high confidence)
+        entry: python -m vulture codewiki/src/enduser codewiki/cli/commands/enduser.py tests --min-confidence 90 --ignore-names _cls,_args
+        language: python
+        additional_dependencies:
+          - vulture==2.14
+        pass_filenames: false
+        stages: [pre-commit]
+      - id: deptry
+        name: deptry
+        entry: python -m deptry . --extend-exclude .tmp_make --extend-exclude .tmp_manual_review --extend-exclude .tmp_manual_review_live --ignore-notebooks --known-first-party codewiki --pep621-dev-dependency-groups dev,quality --ignore DEP002 --per-rule-ignores DEP001=mermaid_parser|mermaid --package-module-name-map GitPython=git,PyYAML=yaml,python-dotenv=dotenv,tree-sitter-language-pack=tree_sitter_languages|tree_sitter_language_pack,markdown-it-py=markdown_it
+        language: python
+        additional_dependencies:
+          - deptry==0.23.1
+        pass_filenames: false
+        stages: [pre-commit]
+      - id: hadolint
+        name: hadolint
+        entry: bash -lc 'command -v hadolint >/dev/null 2>&1 || { echo "hadolint is required when Dockerfiles change"; exit 1; }; hadolint "$@"' --
+        language: system
+        files: (^|/)(Dockerfile|.*\.Dockerfile)$
+        stages: [pre-commit]
+      - id: checkov
+        name: checkov
+        entry: bash -lc 'command -v checkov >/dev/null 2>&1 || { echo "checkov is required when IaC files change"; exit 1; }; checkov -q -d .'
+        language: system
+        pass_filenames: false
+        files: (^|/)(infra|terraform|k8s|helm)/|\.tf$
+        stages: [pre-commit]
+      - id: pytest-fast
+        name: pytest (fast pre-push)
+        entry: python -m pytest -m "not slow and not e2e" -n auto
+        language: python
+        additional_dependencies:
+          - click>=8.1.0
+          - pydantic>=2.11.7
+          - PyYAML>=6.0.2
+          - pytest==9.0.3
+          - pytest-asyncio==1.3.0
+          - pytest-cov==7.1.0
+          - pytest-xdist==3.8.0
+        pass_filenames: false
+        stages: [pre-push]
+      - id: pytest-maxfail
+        name: pytest (--maxfail=1)
+        entry: python -m pytest --maxfail=1
+        language: python
+        additional_dependencies:
+          - click>=8.1.0
+          - pydantic>=2.11.7
+          - PyYAML>=6.0.2
+          - pytest==9.0.3
+          - pytest-asyncio==1.3.0
+          - pytest-cov==7.1.0
+        pass_filenames: false
+        stages: [pre-push]
+      - id: pip-audit-lockfile
+        name: pip-audit (lockfile-sensitive)
+        entry: python scripts/run_quick_pip_audit.py
+        language: python
+        additional_dependencies:
+          - pip-audit==2.9.0
+        pass_filenames: false
+        stages: [pre-push]

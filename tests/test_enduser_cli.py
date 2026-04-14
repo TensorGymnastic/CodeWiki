@@ -170,7 +170,15 @@ def test_enduser_render_doc_supports_packaged_template_selection(tmp_path):
     runner = CliRunner()
     result = runner.invoke(
         cli,
-        ["enduser", "render-doc", str(path), "--template", "page-ops-checklist", "--output", str(output_path)],
+        [
+            "enduser",
+            "render-doc",
+            str(path),
+            "--template",
+            "page-ops-checklist",
+            "--output",
+            str(output_path),
+        ],
     )
 
     assert result.exit_code == 0
@@ -324,7 +332,9 @@ def test_enduser_review_doc_rejects_invalid_markdown_before_runner(tmp_path, mon
 
     monkeypatch.setattr(
         "codewiki.cli.commands.enduser.run_codex_adversarial",
-        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("runner should not execute")),
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("runner should not execute")
+        ),
     )
 
     runner = CliRunner()

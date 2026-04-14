@@ -26,7 +26,7 @@ classifiers = [
 dependencies = [
     "click>=8.1.0",
     "keyring>=24.0.0",
-    "GitPython>=3.1.40",
+    "GitPython>=3.1.41",
     "Jinja2>=3.1.6",
     "tree-sitter>=0.23.2",
     "tree-sitter-language-pack>=0.8.0",
@@ -39,12 +39,16 @@ dependencies = [
     "tree-sitter-c-sharp>=0.23.1",
     "tree-sitter-php>=0.23.0",
     "tree-sitter-kotlin>=1.1.0",
-    "openai>=1.107.0",
-    "litellm>=1.77.0",
+    "anthropic>=0.52.0",
+    "markdown-it-py>=3.0.0",
+    "mcp>=1.23.0",
+    "openai>=2.30.0",
+    "litellm>=1.83.0",
     "pydantic>=2.11.7",
     "pydantic-settings>=2.10.1",
-    "pydantic-ai>=1.0.6",
-    "requests>=2.32.4",
+    "pydantic-ai>=1.56.0",
+    "requests>=2.33.0",
+    "tiktoken>=0.8.0",
     "python-dotenv>=1.1.1",
     "rich>=14.1.0",
     "networkx>=3.5",
@@ -52,9 +56,9 @@ dependencies = [
     "PyYAML>=6.0.2",
     "mermaid-parser-py>=0.0.2",
     "mermaid-py>=0.8.0",
-    "fastapi>=0.116.0",
+    "fastapi>=0.135.2",
     "uvicorn>=0.35.0",
-    "python-multipart>=0.0.20",
+    "python-multipart>=0.0.22",
     "colorama>=0.4.6",
     "logfire>=4.1.0"
 ]
@@ -70,9 +74,22 @@ dev = [
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",
     "pytest-asyncio>=0.21.0",
+    "pytest-xdist>=3.8.0",
     "black>=23.0.0",
     "mypy>=1.5.0",
     "ruff>=0.1.0",
+    "pre-commit>=4.3.0",
+]
+quality = [
+    "bandit[toml]>=1.8.6",
+    "build>=1.2.2",
+    "coverage[toml]>=7.10.6",
+    "deptry>=0.23.1",
+    "detect-secrets>=1.5.0",
+    "diff-cover>=9.7.1",
+    "pip-audit>=2.9.0",
+    "types-PyYAML>=6.0.12.20250822",
+    "vulture>=2.14",
 ]
 
 [project.scripts]
@@ -117,6 +134,7 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
+files = ["codewiki/src/enduser", "codewiki/cli/commands/enduser.py"]
 
 [tool.ruff]
 line-length = 100
@@ -129,5 +147,19 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --cov=codewiki --cov-report=term-missing"
 markers = [
+    "e2e: end-to-end tests that exercise multi-step CLI flows",
     "integration: opt-in tests that exercise external CLI runners",
+    "slow: tests that are too expensive for local pre-push execution",
 ]
+
+[tool.coverage.run]
+branch = true
+source = ["codewiki"]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
+
+[tool.bandit]
+exclude_dirs = ["tests", ".tmp_make", ".tmp_manual_review", ".tmp_manual_review_live"]
+targets = ["codewiki"]

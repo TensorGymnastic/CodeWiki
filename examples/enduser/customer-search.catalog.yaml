@@ -1,0 +1,129 @@
+entities:
+  - id: entity.customer
+    name: Customer
+    description: Customer master record
+  - id: entity.customer_status
+    name: Customer Status
+    description: Status assigned to customer accounts
+pages:
+  - id: page.customers_search
+    name: Customer Search
+    route: /customers/search
+    screenshot_refs:
+      - screens/customer-search.png
+  - id: page.customers_edit
+    name: Customer Edit
+    route: /customers/edit
+    screenshot_refs:
+      - screens/customer-edit.png
+fields:
+  - id: field.customers_search.customer_name
+    name: customer_name
+    label: Customer Name
+    field_type: text
+    required: false
+    readonly: false
+  - id: field.customers_search.customer_status
+    name: customer_status
+    label: Customer Status
+    field_type: select
+    required: false
+    readonly: false
+  - id: field.customers_edit.status
+    name: status
+    label: Status
+    field_type: select
+    required: true
+    readonly: false
+  - id: field.customers_edit.last_updated_at
+    name: last_updated_at
+    label: Last Updated At
+    field_type: datetime
+    required: false
+    readonly: true
+transactions:
+  - id: txn.search_customer
+    name: Search Customer
+    goal: Find customers by name and status
+  - id: txn.update_customer
+    name: Update Customer
+    goal: Update customer profile and status
+evidence:
+  - id: ev.playwright.page.customers_search
+    evidence_type: playwright
+    source_ref: /customers/search
+    summary: Playwright crawl evidence for search page
+  - id: ev.screenshot.page.customers_search
+    evidence_type: screenshot
+    source_ref: screens/customer-search.png
+    summary: Screenshot for search page
+  - id: ev.playwright.page.customers_edit
+    evidence_type: playwright
+    source_ref: /customers/edit
+    summary: Playwright crawl evidence for edit page
+  - id: ev.api.customer.update
+    evidence_type: network
+    source_ref: PUT /api/customers/:id
+    summary: Network trace for customer update save action
+relations:
+  - source: page.customers_search
+    relation: contains
+    target: field.customers_search.customer_name
+    evidence_ids:
+      - ev.playwright.page.customers_search
+  - source: page.customers_search
+    relation: contains
+    target: field.customers_search.customer_status
+    evidence_ids:
+      - ev.playwright.page.customers_search
+  - source: page.customers_search
+    relation: participates_in
+    target: txn.search_customer
+    evidence_ids:
+      - ev.playwright.page.customers_search
+  - source: page.customers_edit
+    relation: contains
+    target: field.customers_edit.status
+    evidence_ids:
+      - ev.playwright.page.customers_edit
+  - source: page.customers_edit
+    relation: contains
+    target: field.customers_edit.last_updated_at
+    evidence_ids:
+      - ev.playwright.page.customers_edit
+  - source: page.customers_edit
+    relation: participates_in
+    target: txn.update_customer
+    evidence_ids:
+      - ev.playwright.page.customers_edit
+      - ev.api.customer.update
+  - source: txn.update_customer
+    relation: updates
+    target: entity.customer
+    evidence_ids:
+      - ev.api.customer.update
+  - source: txn.update_customer
+    relation: updates
+    target: entity.customer_status
+    evidence_ids:
+      - ev.api.customer.update
+  - source: field.customers_search.customer_name
+    relation: appears_on
+    target: page.customers_search
+    evidence_ids:
+      - ev.playwright.page.customers_search
+  - source: field.customers_search.customer_status
+    relation: appears_on
+    target: page.customers_search
+    evidence_ids:
+      - ev.playwright.page.customers_search
+  - source: field.customers_edit.status
+    relation: appears_on
+    target: page.customers_edit
+    evidence_ids:
+      - ev.playwright.page.customers_edit
+  - source: field.customers_edit.last_updated_at
+    relation: appears_on
+    target: page.customers_edit
+    evidence_ids:
+      - ev.playwright.page.customers_edit

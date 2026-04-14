@@ -17,7 +17,7 @@ class _BaseRecord(BaseModel):
 
     @field_validator("id", "name")
     @classmethod
-    def _strip_required(cls, value: str) -> str:
+    def _strip_required(_cls, value: str) -> str:
         value = value.strip()
         if not value:
             raise ValueError("value must not be empty")
@@ -41,7 +41,7 @@ class FieldRecord(_BaseRecord):
 
     @field_validator("label", "field_type")
     @classmethod
-    def _field_strings_required(cls, value: str) -> str:
+    def _field_strings_required(_cls, value: str) -> str:
         value = value.strip()
         if not value:
             raise ValueError("value must not be empty")
@@ -60,7 +60,7 @@ class EvidenceRecord(BaseModel):
 
     @field_validator("id", "source_ref", "summary")
     @classmethod
-    def _evidence_strings_required(cls, value: str) -> str:
+    def _evidence_strings_required(_cls, value: str) -> str:
         value = value.strip()
         if not value:
             raise ValueError("value must not be empty")
@@ -75,7 +75,7 @@ class RelationRecord(BaseModel):
 
     @field_validator("source", "relation", "target")
     @classmethod
-    def _relation_strings_required(cls, value: str) -> str:
+    def _relation_strings_required(_cls, value: str) -> str:
         value = value.strip()
         if not value:
             raise ValueError("value must not be empty")

@@ -62,7 +62,7 @@ def test_enduser_review_e2e_generates_doc_and_review_artifact(tmp_path, monkeypa
             self.stdout = stdout
             self.stderr = stderr
 
-    def fake_run(command, *args, **kwargs):
+    def fake_run(command, *_args, **kwargs):
         if command == ["git", "rev-parse", "--show-toplevel"]:
             return CompletedProcess(f"{Path.cwd().resolve()}\n")
 
@@ -144,7 +144,10 @@ def test_enduser_review_e2e_generates_doc_and_review_artifact(tmp_path, monkeypa
                     encoding="utf-8",
                 )
                 return CompletedProcess("")
-            assert "Review the provided markdown document against the catalog and template contract." in input
+            assert (
+                "Review the provided markdown document against the catalog and template contract."
+                in input
+            )
             assert schema["required"] == ["runner", "status", "scores", "summary", "findings"]
             assert schema["additionalProperties"] is False
             assert schema["properties"]["scores"]["additionalProperties"] is False
@@ -199,7 +202,11 @@ def test_enduser_review_e2e_generates_doc_and_review_artifact(tmp_path, monkeypa
     payload = json.loads(review_path.read_text(encoding="utf-8"))
     assert payload["template_id"] == "page-default"
     assert payload["final_document_path"].endswith(".final.md")
-    assert document_path.with_suffix(".final.md").read_text(encoding="utf-8").startswith("# Customer Edit User Guide")
+    assert (
+        document_path.with_suffix(".final.md")
+        .read_text(encoding="utf-8")
+        .startswith("# Customer Edit User Guide")
+    )
     assert payload["judge"]["runner"] == "codex"
     assert payload["adversarial"]["runner"] == "codex"
     assert payload["publication_decision"]["status"] == "approved"

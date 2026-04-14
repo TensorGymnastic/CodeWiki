@@ -223,11 +223,16 @@ def test_load_enduser_doc_template_reads_packaged_metadata():
 def test_ops_checklist_template_changes_rendering_strategy():
     from codewiki.src.enduser.docs import load_enduser_doc_template, render_enduser_document
 
-    document = render_enduser_document(_build_catalog(), template=load_enduser_doc_template("page-ops-checklist"))
+    document = render_enduser_document(
+        _build_catalog(), template=load_enduser_doc_template("page-ops-checklist")
+    )
 
     assert document.startswith("# Customer Edit Operations Checklist")
     assert "Use this checklist to verify the cataloged operator-facing behavior" in document
-    assert "Treat any uncataloged buttons, results, save actions, or navigation as unsupported" in document
+    assert (
+        "Treat any uncataloged buttons, results, save actions, or navigation as unsupported"
+        in document
+    )
     assert "Verify `Customer Name` as a `text` field that is required, editable." in document
     assert "Checklist draft ready for review." in document
 
@@ -449,5 +454,7 @@ def test_validate_rendered_doc_rejects_missing_evidence_ids():
         "- Playwright crawl evidence for /customers/edit",
     )
 
-    with pytest.raises(ValueError, match="Evidence section must contain bullet entries with evidence ids"):
+    with pytest.raises(
+        ValueError, match="Evidence section must contain bullet entries with evidence ids"
+    ):
         validate_rendered_enduser_document(broken_document, template=DEFAULT_ENDUSER_DOC_TEMPLATE)

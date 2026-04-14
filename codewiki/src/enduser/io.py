@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TextIO
+from typing import TextIO, cast
 
 import yaml
 
@@ -25,7 +25,7 @@ def load_enduser_catalog_from_string(source: str) -> EnduserCatalog:
         parsed = {}
     if not isinstance(parsed, dict):
         raise ValueError("catalog root must be a mapping")
-    return EnduserCatalog.model_validate(parsed)
+    return cast(EnduserCatalog, EnduserCatalog.model_validate(parsed))
 
 
 def load_enduser_catalog_from_stream(stream: TextIO) -> EnduserCatalog:

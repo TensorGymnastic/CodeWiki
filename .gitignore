@@ -72,3 +72,6 @@ Thumbs.db
 *.tmp
 *.log
 *.bak
+.tmp_make/
+.tmp_manual_review/
+.tmp_manual_review_live/

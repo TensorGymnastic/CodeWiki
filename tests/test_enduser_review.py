@@ -237,12 +237,22 @@ def test_build_review_prompt_uses_external_instructions_and_template_contract(tm
 
     document_path = tmp_path / "guide.md"
     catalog_path = tmp_path / "catalog.yaml"
-    document_path.write_text("# Sample\n\n## Purpose\nHi\n\n## Audience\nOps\n\n## Preconditions\n- ok\n\n## Steps\n1. Do it\n\n## Fields\n| Field | Label | Type | Required | Readonly |\n| --- | --- | --- | --- | --- |\n\n## Navigation\n- none\n\n## Evidence\n- `ev.one`: summary\n\n## Review Status\nPending\n", encoding="utf-8")
-    catalog_path.write_text("pages: []\nfields: []\nevidence: []\nrelations: []\nentities: []\ntransactions: []\n", encoding="utf-8")
+    document_path.write_text(
+        "# Sample\n\n## Purpose\nHi\n\n## Audience\nOps\n\n## Preconditions\n- ok\n\n## Steps\n1. Do it\n\n## Fields\n| Field | Label | Type | Required | Readonly |\n| --- | --- | --- | --- | --- |\n\n## Navigation\n- none\n\n## Evidence\n- `ev.one`: summary\n\n## Review Status\nPending\n",
+        encoding="utf-8",
+    )
+    catalog_path.write_text(
+        "pages: []\nfields: []\nevidence: []\nrelations: []\nentities: []\ntransactions: []\n",
+        encoding="utf-8",
+    )
 
-    prompt = build_review_prompt(document_path, catalog_path, load_enduser_doc_template("page-default"))
+    prompt = build_review_prompt(
+        document_path, catalog_path, load_enduser_doc_template("page-default")
+    )
 
-    assert "Review the provided markdown document against the catalog and template contract." in prompt
+    assert (
+        "Review the provided markdown document against the catalog and template contract." in prompt
+    )
     assert "## Repository Context" in prompt
     assert "## Template Contract" in prompt
     assert "template_id: page-default" in prompt
@@ -279,7 +289,9 @@ def test_build_review_prompt_uses_target_repository_root(tmp_path):
         encoding="utf-8",
     )
 
-    prompt = build_review_prompt(document_path, catalog_path, load_enduser_doc_template("page-default"))
+    prompt = build_review_prompt(
+        document_path, catalog_path, load_enduser_doc_template("page-default")
+    )
 
     assert f"repository_root: {repo_root}" in prompt
 

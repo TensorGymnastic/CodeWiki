@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
+from typing import cast
 
 from pydantic import BaseModel, Field
 
@@ -113,10 +114,7 @@ class PlaywrightCatalogExtractor:
         evidence: list[EvidenceRecord] = []
         relations: list[RelationRecord] = []
 
-        route_to_page_id = {
-            page.route: self.config.page_id(page.route)
-            for page in crawl.pages
-        }
+        route_to_page_id = {page.route: self.config.page_id(page.route) for page in crawl.pages}
 
         for page in crawl.pages:
             page_id = route_to_page_id[page.route]
@@ -226,10 +224,11 @@ def load_playwright_crawl(source: Path | str | dict) -> PlaywrightCrawl:
     """Load crawl input from a path or in-memory mapping."""
 
     if isinstance(source, dict):
-        return PlaywrightCrawl.model_validate(source)
+        return cast(PlaywrightCrawl, PlaywrightCrawl.model_validate(source))
 
     path = Path(source)
-    return PlaywrightCrawl.model_validate(json.loads(path.read_text(encoding="utf-8")))
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    return cast(PlaywrightCrawl, PlaywrightCrawl.model_validate(payload))
 
 
 __all__ = [

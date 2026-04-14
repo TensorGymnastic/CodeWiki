@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from importlib.resources import files
 import re
-from typing import TypeVar
+from typing import TypeVar, cast
 
 from pydantic import BaseModel, Field, field_validator
 import yaml
@@ -47,7 +47,7 @@ class EnduserDocTemplate(BaseModel):
 
     @field_validator("template_id", "title_template", "body_template", "document_kind")
     @classmethod
-    def _strip_required(cls, value: str) -> str:
+    def _strip_required(_cls, value: str) -> str:
         value = value.strip()
         if not value:
             raise ValueError("value must not be empty")
@@ -111,7 +111,9 @@ def load_enduser_doc_template(template_id: str) -> EnduserDocTemplate:
         filename = AVAILABLE_ENDUSER_DOC_TEMPLATES[template_id]
     except KeyError as exc:
         available = ", ".join(sorted(AVAILABLE_ENDUSER_DOC_TEMPLATES))
-        raise ValueError(f"unknown enduser template '{template_id}'; available templates: {available}") from exc
+        raise ValueError(
+            f"unknown enduser template '{template_id}'; available templates: {available}"
+        ) from exc
 
     metadata_filename = filename.removesuffix(".md") + ".yaml"
     metadata = _load_packaged_template_metadata(metadata_filename)
@@ -120,19 +122,30 @@ def load_enduser_doc_template(template_id: str) -> EnduserDocTemplate:
             f"template metadata '{metadata_filename}' has mismatched template_id '{metadata['template_id']}'"
         )
 
-    return EnduserDocTemplate.model_validate(
-        {
-            "template_id": template_id,
-            "title_template": metadata.get("title_template", "{page_name} User Guide"),
-            "body_template": _load_packaged_template_body(filename),
-            "required_sections": metadata.get("required_sections", REQUIRED_DOC_SECTIONS),
-            "steps_must_be_numbered": metadata.get("rules", {}).get("steps_must_be_numbered", True),
-            "fields_must_be_table": metadata.get("rules", {}).get("fields_must_be_table", True),
-            "evidence_requires_ids": metadata.get("rules", {}).get("evidence_requires_ids", True),
-            "document_kind": metadata.get("strategy", {}).get("document_kind", "page-guide"),
-            "emphasize_verification": metadata.get("strategy", {}).get("emphasize_verification", False),
-            "mention_scope_limits": metadata.get("strategy", {}).get("mention_scope_limits", True),
-        }
+    return cast(
+        EnduserDocTemplate,
+        EnduserDocTemplate.model_validate(
+            {
+                "template_id": template_id,
+                "title_template": metadata.get("title_template", "{page_name} User Guide"),
+                "body_template": _load_packaged_template_body(filename),
+                "required_sections": metadata.get("required_sections", REQUIRED_DOC_SECTIONS),
+                "steps_must_be_numbered": metadata.get("rules", {}).get(
+                    "steps_must_be_numbered", True
+                ),
+                "fields_must_be_table": metadata.get("rules", {}).get("fields_must_be_table", True),
+                "evidence_requires_ids": metadata.get("rules", {}).get(
+                    "evidence_requires_ids", True
+                ),
+                "document_kind": metadata.get("strategy", {}).get("document_kind", "page-guide"),
+                "emphasize_verification": metadata.get("strategy", {}).get(
+                    "emphasize_verification", False
+                ),
+                "mention_scope_limits": metadata.get("strategy", {}).get(
+                    "mention_scope_limits", True
+                ),
+            }
+        ),
     )
 
 
@@ -162,7 +175,9 @@ def _select_render_page(catalog: EnduserCatalog, page_id: str | None) -> PageRec
 
 
 def infer_enduser_document_page_id(markdown: str, catalog: EnduserCatalog) -> str | None:
-    title_line = next((line[2:].strip() for line in markdown.splitlines() if line.startswith("# ")), "")
+    title_line = next(
+        (line[2:].strip() for line in markdown.splitlines() if line.startswith("# ")), ""
+    )
     if title_line:
         for page in sorted(catalog.pages, key=lambda item: len(item.name), reverse=True):
             if page.name in title_line:
@@ -253,7 +268,9 @@ def _render_navigation(scope: EnduserDocScope) -> list[str]:
     for relation in scope.relations:
         if relation.source != scope.page.id or relation.relation != "navigates_to":
             continue
-        target_page = next((page for page in scope.related_pages if page.id == relation.target), None)
+        target_page = next(
+            (page for page in scope.related_pages if page.id == relation.target), None
+        )
         if target_page is not None:
             lines.append(f"- `{scope.page.name}` -> `{target_page.name}` (`{target_page.route}`)")
     if len(lines) == 1:
@@ -292,7 +309,9 @@ def _render_evidence(scope: EnduserDocScope) -> list[str]:
             if relation.target in entity_by_id:
                 entity_names.append(entity_by_id[relation.target].name)
         if item.evidence_type == "screenshot":
-            lines.append(f"- `{item.id}`: {item.summary} Supports visual confirmation of `{scope.page.name}`.")
+            lines.append(
+                f"- `{item.id}`: {item.summary} Supports visual confirmation of `{scope.page.name}`."
+            )
             continue
 
         support_parts: list[str] = []
@@ -317,7 +336,10 @@ def _render_evidence(scope: EnduserDocScope) -> list[str]:
 
 def _format_field_instruction(field: FieldRecord, *, verification_mode: bool) -> str:
     if verification_mode:
-        qualifiers = ["required" if field.required else "optional", "readonly" if field.readonly else "editable"]
+        qualifiers = [
+            "required" if field.required else "optional",
+            "readonly" if field.readonly else "editable",
+        ]
         return f"Verify `{field.label}` as a `{field.field_type}` field that is {', '.join(qualifiers)}."
 
     if field.readonly:
@@ -336,7 +358,9 @@ def _page_scope_summary(scope: EnduserDocScope) -> str:
     return ", ".join(components)
 
 
-def _field_step_for_scope(field: FieldRecord, scope: EnduserDocScope, *, verification_mode: bool) -> str:
+def _field_step_for_scope(
+    field: FieldRecord, scope: EnduserDocScope, *, verification_mode: bool
+) -> str:
     if verification_mode:
         return _format_field_instruction(field, verification_mode=True)
 
@@ -407,33 +431,49 @@ def _render_preconditions(scope: EnduserDocScope, template: EnduserDocTemplate) 
     if scope.page.route:
         lines.append(f"- Treat `{scope.page.route}` as catalog metadata for this page scope.")
     if template.document_kind == "ops-checklist":
-        lines.append("- Treat any uncataloged buttons, results, save actions, or navigation as unsupported until separately evidenced.")
+        lines.append(
+            "- Treat any uncataloged buttons, results, save actions, or navigation as unsupported until separately evidenced."
+        )
     elif template.mention_scope_limits:
-        lines.append("- Use only the page-scoped fields, relations, and evidence listed in this document when describing the workflow.")
+        lines.append(
+            "- Use only the page-scoped fields, relations, and evidence listed in this document when describing the workflow."
+        )
     if scope.evidence:
-        lines.append("- Refer to the cited evidence ids when you need to confirm a page or workflow claim.")
+        lines.append(
+            "- Refer to the cited evidence ids when you need to confirm a page or workflow claim."
+        )
     return "\n".join(lines)
 
 
 def _render_steps(scope: EnduserDocScope, template: EnduserDocTemplate) -> str:
     steps: list[str] = [f"Open the cataloged page scope `{scope.page.name}`."]
     for field in scope.fields:
-        steps.append(_field_step_for_scope(field, scope, verification_mode=template.emphasize_verification))
+        steps.append(
+            _field_step_for_scope(field, scope, verification_mode=template.emphasize_verification)
+        )
 
     if scope.transactions and template.document_kind == "ops-checklist":
-        transaction_summaries = "; ".join(f"`{transaction.name}`: {transaction.goal}" for transaction in scope.transactions)
-        steps.append(f"Confirm that the page is linked to these cataloged transactions: {transaction_summaries}.")
+        transaction_summaries = "; ".join(
+            f"`{transaction.name}`: {transaction.goal}" for transaction in scope.transactions
+        )
+        steps.append(
+            f"Confirm that the page is linked to these cataloged transactions: {transaction_summaries}."
+        )
 
     if scope.entities and template.document_kind == "ops-checklist":
         entity_names = ", ".join(f"`{entity.name}`" for entity in scope.entities)
-        steps.append(f"Verify that the page workflow is tied to these business records: {entity_names}.")
+        steps.append(
+            f"Verify that the page workflow is tied to these business records: {entity_names}."
+        )
 
     navigation_targets = [item for item in scope.related_pages if item.id != scope.page.id]
     if navigation_targets:
         target_text = ", ".join(f"`{item.name}` (`{item.route}`)" for item in navigation_targets)
         steps.append(f"Only continue to catalog-linked destinations when needed: {target_text}.")
     else:
-        steps.append("Do not assume any additional page transitions because no navigation targets are evidenced for this page.")
+        steps.append(
+            "Do not assume any additional page transitions because no navigation targets are evidenced for this page."
+        )
 
     return "\n".join(f"{index}. {step}" for index, step in enumerate(steps, start=1))
 
@@ -481,7 +521,9 @@ def validate_rendered_enduser_document(
         raise ValueError("document must start with a level-1 markdown title")
 
     section_bodies = _extract_markdown_section_bodies(markdown)
-    missing_sections = [section for section in template.required_sections if section not in section_bodies]
+    missing_sections = [
+        section for section in template.required_sections if section not in section_bodies
+    ]
     if missing_sections:
         raise ValueError(f"document is missing required sections: {', '.join(missing_sections)}")
 
@@ -492,7 +534,11 @@ def validate_rendered_enduser_document(
     fields_body = section_bodies["Fields"]
     if template.fields_must_be_table:
         fields_lines = [line.strip() for line in fields_body.splitlines() if line.strip()]
-        if len(fields_lines) < 2 or not fields_lines[0].startswith("|") or not fields_lines[1].startswith("|"):
+        if (
+            len(fields_lines) < 2
+            or not fields_lines[0].startswith("|")
+            or not fields_lines[1].startswith("|")
+        ):
             raise ValueError("document Fields section must contain a markdown table")
 
     evidence_body = section_bodies["Evidence"]
@@ -504,7 +550,9 @@ def validate_rendered_enduser_document(
             line for line in evidence_lines if not re.match(r"^[-*]\s+`[^`]+`:\s+\S+", line)
         ]
         if invalid_evidence:
-            raise ValueError("document Evidence section must contain bullet entries with evidence ids")
+            raise ValueError(
+                "document Evidence section must contain bullet entries with evidence ids"
+            )
 
 
 __all__ = [

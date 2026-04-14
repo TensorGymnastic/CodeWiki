@@ -17,7 +17,9 @@ from codewiki.src.enduser.io import load_enduser_catalog
 
 
 def _load_prompt(name: str) -> str:
-    return files("codewiki").joinpath("prompts", "enduser", name).read_text(encoding="utf-8").strip()
+    return (
+        files("codewiki").joinpath("prompts", "enduser", name).read_text(encoding="utf-8").strip()
+    )
 
 
 def _markdown_block(title: str, body: str, fence: str) -> str:
@@ -330,7 +332,9 @@ def build_generation_prompt(catalog_yaml: str, template: EnduserDocTemplate) -> 
     )
 
 
-def build_codex_judge_prompt(document_path: Path | str, catalog_path: Path | str, template: EnduserDocTemplate) -> str:
+def build_codex_judge_prompt(
+    document_path: Path | str, catalog_path: Path | str, template: EnduserDocTemplate
+) -> str:
     repository_root = resolve_repository_root(document_path, catalog_path)
     return "\n\n".join(
         [
@@ -340,8 +344,14 @@ def build_codex_judge_prompt(document_path: Path | str, catalog_path: Path | str
             _markdown_block("Output Template", template.body_template, "markdown"),
             _markdown_block("Document Path", str(Path(document_path)), "text"),
             _markdown_block("Catalog Path", str(Path(catalog_path)), "text"),
-            _markdown_block("Catalog Summary", _catalog_summary(catalog_path, document_path=document_path), "yaml"),
-            _markdown_block("Document Markdown", Path(document_path).read_text(encoding="utf-8"), "markdown"),
+            _markdown_block(
+                "Catalog Summary",
+                _catalog_summary(catalog_path, document_path=document_path),
+                "yaml",
+            ),
+            _markdown_block(
+                "Document Markdown", Path(document_path).read_text(encoding="utf-8"), "markdown"
+            ),
             _markdown_block("Catalog YAML", Path(catalog_path).read_text(encoding="utf-8"), "yaml"),
         ]
     )
@@ -367,9 +377,19 @@ def build_codex_final_draft_prompt(
             ),
             _markdown_block("Document Path", str(Path(document_path)), "text"),
             _markdown_block("Catalog Path", str(Path(catalog_path)), "text"),
-            _markdown_block("Rewrite Context", _rewrite_context(catalog_path, document_path=document_path), "yaml"),
-            _markdown_block("Catalog Summary", _catalog_summary(catalog_path, document_path=document_path), "yaml"),
-            _markdown_block("Document Markdown", Path(document_path).read_text(encoding="utf-8"), "markdown"),
+            _markdown_block(
+                "Rewrite Context",
+                _rewrite_context(catalog_path, document_path=document_path),
+                "yaml",
+            ),
+            _markdown_block(
+                "Catalog Summary",
+                _catalog_summary(catalog_path, document_path=document_path),
+                "yaml",
+            ),
+            _markdown_block(
+                "Document Markdown", Path(document_path).read_text(encoding="utf-8"), "markdown"
+            ),
             _markdown_block("Catalog YAML", Path(catalog_path).read_text(encoding="utf-8"), "yaml"),
         ]
     )
@@ -389,9 +409,19 @@ def build_codex_adversarial_prompt(
             _markdown_block("Output Template", template.body_template, "markdown"),
             _markdown_block("Document Path", str(Path(document_path)), "text"),
             _markdown_block("Catalog Path", str(Path(catalog_path)), "text"),
-            _markdown_block("Rewrite Context", _rewrite_context(catalog_path, document_path=document_path), "yaml"),
-            _markdown_block("Catalog Summary", _catalog_summary(catalog_path, document_path=document_path), "yaml"),
-            _markdown_block("Document Markdown", Path(document_path).read_text(encoding="utf-8"), "markdown"),
+            _markdown_block(
+                "Rewrite Context",
+                _rewrite_context(catalog_path, document_path=document_path),
+                "yaml",
+            ),
+            _markdown_block(
+                "Catalog Summary",
+                _catalog_summary(catalog_path, document_path=document_path),
+                "yaml",
+            ),
+            _markdown_block(
+                "Document Markdown", Path(document_path).read_text(encoding="utf-8"), "markdown"
+            ),
             _markdown_block("Catalog YAML", Path(catalog_path).read_text(encoding="utf-8"), "yaml"),
         ]
     )
