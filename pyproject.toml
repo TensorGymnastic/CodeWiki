@@ -105,7 +105,7 @@ packages = [
 ]
 
 [tool.setuptools.package-data]
-codewiki = ["templates/**/*", "py.typed"]
+codewiki = ["templates/**/*", "prompts/**/*", "py.typed"]
 
 [tool.black]
 line-length = 100
@@ -128,3 +128,6 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --cov=codewiki --cov-report=term-missing"
+markers = [
+    "integration: opt-in tests that exercise external CLI runners",
+]

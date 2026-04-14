@@ -9,7 +9,12 @@ import yaml
 from click import ClickException, argument, echo, group, option, Path as ClickPath
 from pydantic import ValidationError
 
-from codewiki.src.enduser.docs import DEFAULT_ENDUSER_DOC_TEMPLATE, render_enduser_document
+from codewiki.src.enduser.docs import (
+    DEFAULT_ENDUSER_DOC_TEMPLATE,
+    load_enduser_doc_template,
+    render_enduser_document,
+    validate_rendered_enduser_document,
+)
 from codewiki.src.enduser.io import (
     dump_enduser_catalog,
     load_enduser_catalog,
@@ -22,8 +27,9 @@ from codewiki.src.enduser.playwright import (
 from codewiki.src.enduser.review import (
     EnduserReviewArtifact,
     PublicationDecision,
+    run_codex_adversarial,
+    run_codex_final_draft,
     run_codex_judge,
-    run_opencode_adversarial,
 )
 
 
@@ -98,12 +104,26 @@ def extract_playwright(source: Path, output: Path):
     required=True,
     help="Write rendered Markdown to this path.",
 )
-def render_doc(source: Path, output: Path):
+@option(
+    "--template",
+    "template_id",
+    default=DEFAULT_ENDUSER_DOC_TEMPLATE.template_id,
+    show_default=True,
+    help="Packaged enduser markdown template to render.",
+)
+@option(
+    "--page",
+    "page_id",
+    help="Render a specific page id from a multi-page catalog.",
+)
+def render_doc(source: Path, output: Path, template_id: str, page_id: str | None):
     """Render a fixed-format Markdown document from an enduser catalog."""
 
     try:
         catalog = _load_catalog(source)
-        document = render_enduser_document(catalog, template=DEFAULT_ENDUSER_DOC_TEMPLATE)
+        template = load_enduser_doc_template(template_id)
+        document = render_enduser_document(catalog, template=template, page_id=page_id)
+        validate_rendered_enduser_document(document, template=template)
         output.write_text(document, encoding="utf-8")
         echo(f"Document written to {output}")
     except (ValueError, ValidationError, yaml.YAMLError) as exc:
@@ -125,23 +145,41 @@ def render_doc(source: Path, output: Path):
     required=True,
     help="Write normalized review JSON to this path.",
 )
-def review_doc(source: Path, catalog: Path, output: Path):
-    """Review a rendered enduser document with codex first and opencode second."""
+@option(
+    "--template",
+    "template_id",
+    default=DEFAULT_ENDUSER_DOC_TEMPLATE.template_id,
+    show_default=True,
+    help="Packaged enduser markdown template that the document must satisfy.",
+)
+def review_doc(source: Path, catalog: Path, output: Path, template_id: str):
+    """Run Codex adversarial review, produce a final draft, then judge the final draft."""
 
     try:
+        template = load_enduser_doc_template(template_id)
         _load_catalog(catalog)
-        judge = run_codex_judge(source, catalog, DEFAULT_ENDUSER_DOC_TEMPLATE.template_id)
-        adversarial = run_opencode_adversarial(source, catalog, DEFAULT_ENDUSER_DOC_TEMPLATE.template_id)
-        failed = judge.status == "fail" or adversarial.status == "fail"
+        validate_rendered_enduser_document(source.read_text(encoding="utf-8"), template=template)
+        adversarial = run_codex_adversarial(source, catalog, template)
+        final_document = run_codex_final_draft(
+            source,
+            catalog,
+            template,
+            adversarial,
+        )
+        final_document_path = source.with_suffix(".final.md")
+        validate_rendered_enduser_document(final_document, template=template)
+        final_document_path.write_text(final_document, encoding="utf-8")
+        judge = run_codex_judge(final_document_path, catalog, template)
         artifact = EnduserReviewArtifact(
             document_path=str(source),
+            final_document_path=str(final_document_path),
             catalog_path=str(catalog),
-            template_id=DEFAULT_ENDUSER_DOC_TEMPLATE.template_id,
+            template_id=template.template_id,
             judge=judge,
             adversarial=adversarial,
             publication_decision=PublicationDecision(
-                status="rejected" if failed else "approved",
-                reasons=judge.findings + adversarial.findings,
+                status="rejected" if judge.status == "fail" else "approved",
+                reasons=judge.findings if judge.status == "fail" else [],
             ),
         )
         output.write_text(json.dumps(artifact.model_dump(), indent=2), encoding="utf-8")

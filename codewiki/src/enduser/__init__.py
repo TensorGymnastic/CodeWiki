@@ -2,8 +2,13 @@
 
 from .docs import (
     DEFAULT_ENDUSER_DOC_TEMPLATE,
+    build_enduser_doc_scope,
+    EnduserDocScope,
     EnduserDocTemplate,
+    infer_enduser_document_page_id,
+    load_enduser_doc_template,
     render_enduser_document,
+    validate_rendered_enduser_document,
 )
 from .io import (
     dump_enduser_catalog,
@@ -31,6 +36,12 @@ from .playwright import (
     PlaywrightPageCapture,
     load_playwright_crawl,
 )
+from .prompting import (
+    build_codex_adversarial_prompt,
+    build_codex_final_draft_prompt,
+    build_codex_judge_prompt,
+    build_generation_prompt,
+)
 from .review import (
     AdversarialReview,
     EnduserReviewArtifact,
@@ -38,21 +49,31 @@ from .review import (
     PublicationDecision,
     ReviewScoreSet,
     build_review_prompt,
+    run_codex_adversarial,
+    run_codex_final_draft,
     run_codex_judge,
-    run_opencode_adversarial,
 )
 
 __all__ = [
     "AdversarialReview",
+    "build_codex_adversarial_prompt",
+    "build_codex_final_draft_prompt",
+    "build_codex_judge_prompt",
+    "build_enduser_doc_scope",
+    "build_generation_prompt",
     "build_review_prompt",
     "DEFAULT_ENDUSER_DOC_TEMPLATE",
+    "EnduserDocScope",
     "dump_enduser_catalog",
     "EnduserDocTemplate",
+    "infer_enduser_document_page_id",
+    "load_enduser_doc_template",
     "load_enduser_catalog",
     "load_enduser_catalog_from_string",
     "load_enduser_catalog_from_stream",
     "save_enduser_catalog",
     "render_enduser_document",
+    "validate_rendered_enduser_document",
     "PlaywrightActionCapture",
     "PlaywrightCatalogExtractor",
     "PlaywrightCrawl",
@@ -72,6 +93,7 @@ __all__ = [
     "RelationRecord",
     "ReviewScoreSet",
     "TransactionRecord",
+    "run_codex_adversarial",
+    "run_codex_final_draft",
     "run_codex_judge",
-    "run_opencode_adversarial",
 ]

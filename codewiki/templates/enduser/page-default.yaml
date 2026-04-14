@@ -1,0 +1,19 @@
+template_id: page-default
+title_template: "{page_name} User Guide"
+required_sections:
+  - Purpose
+  - Audience
+  - Preconditions
+  - Steps
+  - Fields
+  - Navigation
+  - Evidence
+  - Review Status
+rules:
+  steps_must_be_numbered: true
+  fields_must_be_table: true
+  evidence_requires_ids: true
+strategy:
+  document_kind: page-guide
+  emphasize_verification: false
+  mention_scope_limits: true

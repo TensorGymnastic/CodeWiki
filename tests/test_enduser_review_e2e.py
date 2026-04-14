@@ -1,5 +1,6 @@
 import json
 import textwrap
+from pathlib import Path
 
 from click.testing import CliRunner
 
@@ -57,16 +58,100 @@ def test_enduser_review_e2e_generates_doc_and_review_artifact(tmp_path, monkeypa
     calls = []
 
     class CompletedProcess:
-        def __init__(self, stdout: str):
+        def __init__(self, stdout: str, stderr: str = ""):
             self.stdout = stdout
+            self.stderr = stderr
 
-    def fake_run(command, input, text, capture_output, check):
+    def fake_run(command, *args, **kwargs):
+        if command == ["git", "rev-parse", "--show-toplevel"]:
+            return CompletedProcess(f"{Path.cwd().resolve()}\n")
+
+        input = kwargs["input"]
+        text = kwargs["text"]
+        capture_output = kwargs["capture_output"]
+        check = kwargs["check"]
+        cwd = kwargs["cwd"]
+        timeout = kwargs["timeout"]
+
         assert text is True
         assert capture_output is True
         assert check is True
+        assert cwd == str(Path.cwd().resolve())
+        assert timeout == 120
         calls.append(command)
-        if command == ["codex", "exec"]:
-            return CompletedProcess(
+        if command[:2] == ["codex", "exec"]:
+            output_path = Path(command[command.index("--output-last-message") + 1])
+            assert command[2] == "--skip-git-repo-check"
+            assert "--output-schema" in command
+            assert command[-1] == "-"
+            schema_path = Path(command[command.index("--output-schema") + 1])
+            schema = json.loads(schema_path.read_text(encoding="utf-8"))
+            if "Perform an adversarial review of the provided markdown document." in input:
+                assert schema["additionalProperties"] is False
+                assert schema["properties"]["findings"]["items"]["type"] == "string"
+                assert schema["properties"]["unsupported_claims"]["items"]["type"] == "string"
+                assert schema["properties"]["missing_evidence"]["items"]["type"] == "string"
+                assert schema["properties"]["format_attacks"]["items"]["type"] == "string"
+                assert "## Repository Context" in input
+                assert "execution_model: codex-cli" in input
+                assert "## Rewrite Context" in input
+                output_path.write_text(
+                    json.dumps(
+                        {
+                            "runner": "codex",
+                            "status": "pass",
+                            "findings": ["Tighten the purpose statement."],
+                            "unsupported_claims": ["Claim about operators is too broad."],
+                            "missing_evidence": [],
+                            "format_attacks": [],
+                            "summary": "One unsupported claim found.",
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+                return CompletedProcess("")
+            if "## Adversarial Review" in input:
+                assert schema["required"] == ["document"]
+                assert schema["additionalProperties"] is False
+                assert f"## Document Path\n```text\n{document_path}" in input
+                assert f"## Catalog Path\n```text\n{catalog_path}" in input
+                assert "## Rewrite Context" in input
+                assert "document_focus:" in input
+                assert "page_workflow_context:" in input
+                assert "runner: codex" in input
+                output_path.write_text(
+                    "```json\n"
+                    + json.dumps(
+                        {
+                            "document": (
+                                "# Customer Edit User Guide\n\n"
+                                "## Purpose\nRevised purpose.\n\n"
+                                "## Audience\nOperators and business users.\n\n"
+                                "## Preconditions\n- You can access the target page in the product.\n\n"
+                                "## Steps\n1. Open `Customer Edit`.\n\n"
+                                "## Fields\n| Field | Label | Type | Required | Readonly |\n"
+                                "| --- | --- | --- | --- | --- |\n"
+                                "| `customer_name` | Customer Name | `text` | yes | no |\n\n"
+                                "## Navigation\n- No known navigation targets.\n\n"
+                                "## Evidence\n"
+                                "- `ev.playwright.page.customers_edit`: Playwright crawl evidence for /customers/edit\n"
+                                "- `ev.screenshot.page.customers_edit`: Screenshot for /customers/edit\n\n"
+                                "## Review Status\nRevised after adversarial review.\n"
+                            )
+                        }
+                    )
+                    + "\n```",
+                    encoding="utf-8",
+                )
+                return CompletedProcess("")
+            assert "Review the provided markdown document against the catalog and template contract." in input
+            assert schema["required"] == ["runner", "status", "scores", "summary", "findings"]
+            assert schema["additionalProperties"] is False
+            assert schema["properties"]["scores"]["additionalProperties"] is False
+            assert schema["properties"]["findings"]["items"]["type"] == "string"
+            assert str(document_path.with_suffix(".final.md")) in input
+            assert str(catalog_path) in input
+            output_path.write_text(
                 json.dumps(
                     {
                         "runner": "codex",
@@ -77,25 +162,13 @@ def test_enduser_review_e2e_generates_doc_and_review_artifact(tmp_path, monkeypa
                             "format_compliance": 5,
                             "clarity": 4,
                         },
-                        "summary": "Judge passed the document.",
+                        "summary": "Judge passed the final draft.",
                         "findings": [],
                     }
-                )
+                ),
+                encoding="utf-8",
             )
-        if command == ["opencode", "run"]:
-            return CompletedProcess(
-                json.dumps(
-                    {
-                        "runner": "opencode",
-                        "status": "pass",
-                        "findings": [],
-                        "unsupported_claims": [],
-                        "missing_evidence": [],
-                        "format_attacks": [],
-                        "summary": "No adversarial issues found.",
-                    }
-                )
-            )
+            return CompletedProcess("")
         raise AssertionError(f"unexpected command: {command}")
 
     monkeypatch.setattr("codewiki.src.enduser.review.subprocess.run", fake_run)
@@ -121,10 +194,12 @@ def test_enduser_review_e2e_generates_doc_and_review_artifact(tmp_path, monkeypa
         ],
     )
     assert review_result.exit_code == 0
-    assert calls == [["codex", "exec"], ["opencode", "run"]]
+    assert [call[:2] for call in calls] == [["codex", "exec"], ["codex", "exec"], ["codex", "exec"]]
 
     payload = json.loads(review_path.read_text(encoding="utf-8"))
     assert payload["template_id"] == "page-default"
+    assert payload["final_document_path"].endswith(".final.md")
+    assert document_path.with_suffix(".final.md").read_text(encoding="utf-8").startswith("# Customer Edit User Guide")
     assert payload["judge"]["runner"] == "codex"
-    assert payload["adversarial"]["runner"] == "opencode"
+    assert payload["adversarial"]["runner"] == "codex"
     assert payload["publication_decision"]["status"] == "approved"

@@ -1,0 +1,19 @@
+template_id: page-ops-checklist
+title_template: "{page_name} Operations Checklist"
+required_sections:
+  - Purpose
+  - Audience
+  - Preconditions
+  - Steps
+  - Fields
+  - Navigation
+  - Evidence
+  - Review Status
+rules:
+  steps_must_be_numbered: true
+  fields_must_be_table: true
+  evidence_requires_ids: true
+strategy:
+  document_kind: ops-checklist
+  emphasize_verification: true
+  mention_scope_limits: true

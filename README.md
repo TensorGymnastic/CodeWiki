@@ -47,9 +47,19 @@ The target direction differs from upstream `CodeWiki`:
 The first enduser-facing publication gate now uses:
 
 - validated YAML catalogs as the canonical source
-- a fixed Markdown template with required sections
-- `codex` as the primary LLM judge
-- `opencode` as the secondary adversarial reviewer
+- packaged Markdown templates with required sections plus YAML metadata rules
+- packaged external prompt files for `codex`
+- `codex` as the adversarial reviewer with repository-root access
+- `codex` to produce the revised final draft
+- `codex` as the final LLM judge on that revised draft with schema-constrained output
+
+Current implementation status:
+
+- `validate`, `format`, `extract-playwright`, `render-doc`, and `review-doc` are implemented
+- packaged templates currently support `page-default` and `page-ops-checklist`
+- prompt composition includes repository context, catalog summary, and rewrite graph context for Codex
+- the review artifact includes both adversarial and judge results, but both are now produced by Codex
+- page selection is explicit for multi-page catalogs via `render-doc --page <page-id>`
 
 The fixed Markdown format requires these sections:
 
@@ -67,15 +77,38 @@ Current CLI flow:
 
 ```bash
 codewiki enduser validate catalog.yaml
-codewiki enduser render-doc catalog.yaml --output guide.md
-codewiki enduser review-doc guide.md --catalog catalog.yaml --output review.json
+codewiki enduser render-doc catalog.yaml --page page.customers_search --template page-default --output guide.md
+codewiki enduser review-doc guide.md --catalog catalog.yaml --template page-default --output review.json
 ```
+
+For repo-local guidance, use the Makefile targets instead of reassembling commands by hand:
+
+```bash
+make help
+make check
+make render-sample
+make review-sample
+make clean-sample
+```
+
+`make review-sample` uses a deterministic local `codex` shim so contributors can verify the `review-doc` command path without relying on live model output.
 
 Review policy:
 
-- `codex` runs first and must succeed
-- `opencode` runs second and must succeed
-- the output artifact contains `judge`, `adversarial`, and `publication_decision`
+- generation happens before `review-doc`
+- prompt composition is deterministic: external instructions first, then template contract, then dynamic document/catalog payload
+- template metadata defines hard validation rules for steps, fields, and evidence formatting
+- `codex` runs the adversarial pass first and must succeed
+- `codex` writes a final draft based on the adversarial review
+- `codex` judges the final draft last
+- the output artifact contains `final_document_path`, `judge`, `adversarial`, and `publication_decision`
+
+Current limitations:
+
+- rendered documents are still generic before the Codex rewrite stage
+- multi-page catalogs are flattened into one document; page-scoped rendering is not implemented yet
+- field and evidence selection is not yet page-aware
+- MCP exposure still reflects upstream repository-doc tooling rather than the new enduser CLI flow
 
 Opt-in real-runner integration test:
 
@@ -84,7 +117,7 @@ ENDUSER_ENABLE_REAL_REVIEW_TEST=1 \
 python3 -m pytest tests/test_enduser_review_integration.py -q
 ```
 
-This requires both `codex` and `opencode` on `PATH` and any credentials those CLIs require.
+This requires `codex` on `PATH` and any credentials the CLI requires.
 
 ---
 
