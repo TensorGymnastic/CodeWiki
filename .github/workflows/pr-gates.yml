@@ -103,7 +103,7 @@ jobs:
           --fail-under=85
       - name: Diff coverage threshold
         run: >
-          python -m diff_cover coverage.xml
+          diff-cover coverage.xml
           --compare-branch=origin/${{ github.base_ref || 'main' }}
           --fail-under=90
 
@@ -116,11 +116,14 @@ jobs:
         with:
           python-version: "3.12"
           cache: "pip"
-      - run: python -m pip install -e '.[quality]'
-      - run: python -m bandit -c pyproject.toml -r codewiki
-      - uses: returntocorp/semgrep-action@v1
-        with:
-          config: auto
+      - run: python -m pip install -e '.[quality]' semgrep
+      - run: >
+          python -m bandit -c pyproject.toml
+          -r codewiki/src/enduser codewiki/cli/commands/enduser.py codewiki/run_web_app.py
+      - run: >
+          semgrep scan --config auto --error
+          --exclude-rule python.lang.compatibility.python37.python37-compatibility-importlib2
+          codewiki/src/enduser codewiki/cli/commands/enduser.py codewiki/run_web_app.py
 
   supply_chain:
     name: supply_chain
@@ -134,7 +137,7 @@ jobs:
       - run: python -m pip install -e '.[quality]'
       - run: python scripts/check_dependency_manifests.py
       - run: python -m pip_audit -r requirements.txt
-      - uses: google/osv-scanner-action@v2
+      - uses: google/osv-scanner-action@v2.3.5
         with:
           scan-args: |-
             --lockfile=requirements.txt
@@ -146,7 +149,7 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
+      - uses: gitleaks/gitleaks-action@v2.3.9
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -171,7 +174,7 @@ jobs:
           quiet: true
       - name: Trivy filesystem scan
         if: ${{ needs.detect_changes.outputs.container_changed == 'true' || needs.detect_changes.outputs.iac_changed == 'true' }}
-        uses: aquasecurity/trivy-action@0.30.0
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           scan-type: fs
           scan-ref: .

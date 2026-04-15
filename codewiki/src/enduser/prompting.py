@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from importlib.resources import files
 from pathlib import Path
-import subprocess
+import subprocess  # nosec B404 - fixed git invocation is used for repository root discovery
 
 import yaml
 
@@ -51,7 +51,7 @@ def resolve_repository_root(*paths: Path | str) -> Path:
     for path in resolved_paths:
         probe = path if path.is_dir() else path.parent
         try:
-            completed = subprocess.run(
+            completed = subprocess.run(  # nosec B603 B607 - fixed git command, cwd is a resolved local path
                 ["git", "rev-parse", "--show-toplevel"],
                 cwd=str(probe),
                 check=True,

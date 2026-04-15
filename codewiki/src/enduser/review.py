@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import tempfile
-import subprocess
+import subprocess  # nosec B404 - controlled codex subprocess execution is the review engine boundary
 from pathlib import Path
 from typing import Any, Literal, Protocol, cast
 
@@ -252,7 +252,7 @@ def _run_codex_command(
             command.extend(["--output-schema", schema_file.name])
         command.extend(["--output-last-message", output_file.name, "-"])
         try:
-            completed = subprocess.run(
+            completed = subprocess.run(  # nosec B603 - command list is constructed from fixed codex args
                 command,
                 input=input_payload,
                 text=True,
