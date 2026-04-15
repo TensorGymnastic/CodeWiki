@@ -137,7 +137,7 @@ jobs:
       - run: python -m pip install -e '.[quality]'
       - run: python scripts/check_dependency_manifests.py
       - run: python -m pip_audit -r requirements.txt
-      - uses: google/osv-scanner-action@v2.3.5
+      - uses: google/osv-scanner-action/osv-scanner-action@v2.3.5
         with:
           scan-args: |-
             --lockfile=requirements.txt
