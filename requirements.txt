@@ -3,7 +3,7 @@
 # `[project.dependencies]` in `pyproject.toml`.
 click>=8.1.0
 keyring>=24.0.0
-GitPython>=3.1.41
+GitPython>=3.1.50
 Jinja2>=3.1.6
 tree-sitter>=0.23.2
 tree-sitter-language-pack>=0.8.0
@@ -26,7 +26,7 @@ pydantic-settings>=2.10.1
 pydantic-ai-slim[openai]>=1.56.0
 requests>=2.33.0
 tiktoken>=0.8.0
-python-dotenv>=1.1.1
+python-dotenv>=1.2.2
 rich>=14.1.0
 networkx>=3.5
 psutil>=7.0.0
@@ -35,6 +35,6 @@ mermaid-parser-py>=0.0.2
 mermaid-py>=0.8.0
 fastapi>=0.135.2
 uvicorn>=0.35.0
-python-multipart>=0.0.22
+python-multipart>=0.0.27
 colorama>=0.4.6
 logfire>=4.1.0
