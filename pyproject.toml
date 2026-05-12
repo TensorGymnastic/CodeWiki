@@ -164,6 +164,7 @@ skip_empty = true
 paths_to_mutate = ["codewiki/src/enduser"]
 also_copy = [
     "codewiki/__init__.py",
+    "codewiki/cli",
     "codewiki/prompts",
     "codewiki/templates",
 ]
