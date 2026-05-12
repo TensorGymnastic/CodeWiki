@@ -162,6 +162,7 @@ skip_empty = true
 
 [tool.mutmut]
 paths_to_mutate = ["codewiki/src/enduser"]
+also_copy = ["codewiki/templates"]
 
 [tool.bandit]
 exclude_dirs = ["tests", ".tmp_make", ".tmp_manual_review", ".tmp_manual_review_live"]
