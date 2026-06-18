@@ -136,6 +136,11 @@ disallow_untyped_defs = false
 disallow_incomplete_defs = false
 files = ["codewiki/src/enduser", "codewiki/cli/commands/enduser.py"]
 
+[tool.mutmut]
+paths_to_mutate = ["codewiki/src/enduser"]
+pytest_add_cli_args_test_selection = ["tests"]
+also_copy = ["codewiki"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py312"
